@@ -9,6 +9,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"] ?? "wasd",
+    url: process.env.DATABASE_URL ?? "mysql://root:@localhost:3306/iusearch_auth",
   },
 });

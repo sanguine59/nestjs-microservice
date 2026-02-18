@@ -1,5 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt'
 
 interface UserData {
@@ -14,10 +15,18 @@ interface LoginData {
     password: string
 }
 
+interface UserProfileData {
+    username: string,
+    email: string,
+    country: string,
+    role: string
+}
+
 @Injectable()
 export class AuthService { 
     constructor(
-        private prisma: PrismaService
+        private prisma: PrismaService,
+        private jwtService: JwtService
     ) {}
 
     async register (data: UserData) {
@@ -75,7 +84,7 @@ export class AuthService {
     }
 
     async login (data: LoginData) {
-        let flag = await this.prisma.user.findUnique({
+        const flag = await this.prisma.user.findUnique({
             where: {email: data.email}
         })
         if(!flag) throw new UnauthorizedException("Invalid Credentials")
@@ -84,9 +93,33 @@ export class AuthService {
         
         if(!garamEnak) throw new UnauthorizedException("Invalid Credentials")
 
-        // to be implemented
-
-        return {message: 'login successful'}
+        const payload = {
+            client: flag.user_id,
+            role: flag.role
+        }
+        
+        return {access_token: await this.jwtService.signAsync(payload) ,message: 'login successful'}
     }
 
+    async getInfo(id: string): Promise<UserProfileData>{
+        const flag = await this.prisma.user.findUnique({
+            where: {user_id: id},
+            select: {
+                username: true,
+                email: true,
+                country: true,
+                role: true
+            }
+        })
+        if(!flag) throw new NotFoundException("ID NOT FOUND")
+        
+        const data: UserProfileData = {
+            username: flag.username,
+            email: flag.email,
+            country: flag.country,
+            role: flag.role
+        }
+
+        return data
+    }
 }
