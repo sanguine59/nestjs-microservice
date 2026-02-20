@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt'
+import * as crypto from 'crypto'
 
 interface UserData {
     username: string,
@@ -37,7 +37,10 @@ export class AuthService {
         })
         if(isUnique) throw new ConflictException("Email Already Registered")
         
-        const salt = await bcrypt.hash(data.password, 10)
+        const salt = crypto
+            .createHash('sha256')
+            .update(data.password)
+            .digest('base64');
         
 
         await this.prisma.user.create({
@@ -51,10 +54,9 @@ export class AuthService {
             },
         })
 
-        return { message: 'User Registered'}
+        return { status: 200, message: 'User Registered'}
     }
 
-    
 
     private validateRegister(data: UserData): Boolean{
         // ga dikasi tau inklusif atau eksklusif
@@ -89,16 +91,19 @@ export class AuthService {
         })
         if(!flag) throw new UnauthorizedException("Invalid Credentials")
 
-        const garamEnak = await bcrypt.compare(data.password, flag.password)
+        const salt = crypto
+            .createHash('sha256')
+            .update(data.password)
+            .digest('base64');
         
-        if(!garamEnak) throw new UnauthorizedException("Invalid Credentials")
+        if(salt !== flag.password) throw new UnauthorizedException('Invalid Credentials')        
 
         const payload = {
             client: flag.user_id,
             role: flag.role
         }
         
-        return {access_token: await this.jwtService.signAsync(payload) ,message: 'login successful'}
+        return {status: 200, access_token: await this.jwtService.signAsync(payload) ,message: 'login successful'}
     }
 
     async getInfo(id: string): Promise<UserProfileData>{
