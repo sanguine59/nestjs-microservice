@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginData } from './dto/login.dto';
 import { RegisterData } from './dto/register.dto';
-import { ApiBadRequestResponse, ApiConflictResponse, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { JwtGuard } from './jwt.guard';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 // interface UserData {
 //     username: string,
 //     email: string,
@@ -43,7 +44,13 @@ export class AuthController {
         return this.authService.login(body)
     }
 
+
+    @UseGuards(JwtGuard)
     @Get(':id/profile')
+    @ApiBearerAuth()
+    @ApiParam({name:'id'})
+    @ApiOkResponse({description: 'Data Retrieved'})
+    @ApiNotFoundResponse({description: 'Data not Found'})
     getInfo(@Param('id') id: string): Promise<UserProfileData> {
         return this.authService.getInfo(id)
     }
