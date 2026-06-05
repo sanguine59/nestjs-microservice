@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -30,8 +30,6 @@ export class AuthService {
   ) {}
 
   async register(data: UserData) {
-    if (!this.validateRegister(data)) throw new BadRequestException('Bad Credentials');
-
     const isUnique = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -50,35 +48,6 @@ export class AuthService {
     });
 
     return { status: 200, message: 'User Registered' };
-  }
-
-  private validateRegister(data: UserData): boolean {
-    if (!data.username || !data.email || !data.password || data.country === undefined) return false;
-
-    if (data.username.length < 4 || data.username.length > 40) return false;
-
-    let atCount = 0;
-    for (const c of data.email) if (c === '@') atCount++;
-    if (atCount !== 1) return false;
-    if (!data.email.includes('.')) return false;
-    if (data.email.includes('@.') || data.email.includes('.@')) return false;
-
-    if (data.password.length < 8 || data.password.length > 40) return false;
-
-    let hasUpper = false;
-    let hasLower = false;
-    let hasNumber = false;
-    let hasSpecial = false;
-    const specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?`~\\";
-
-    for (const char of data.password) {
-      if (char >= 'A' && char <= 'Z') hasUpper = true;
-      else if (char >= 'a' && char <= 'z') hasLower = true;
-      else if (char >= '0' && char <= '9') hasNumber = true;
-      else if (specialChars.includes(char)) hasSpecial = true;
-    }
-
-    return hasLower && hasUpper && hasNumber && hasSpecial;
   }
 
   async login(data: LoginData) {
